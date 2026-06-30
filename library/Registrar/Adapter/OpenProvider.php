@@ -165,7 +165,10 @@ class Registrar_Adapter_OpenProvider extends Registrar_AdapterAbstract
         // Step 1: Ensure a customer handle exists
         $customerHandle = $this->_getOrCreateCustomer($domain->getContactAdmin());
 
-        // Step 2: Prepare the domain transfer data
+        // Step 2: Resolve existing nameservers via DNS so they are preserved after transfer
+        $existingNs = $this->_lookupNameservers($domain->getName());
+
+        // Step 3: Prepare the domain transfer data
         $data = [
             'domain' => [
                 'name' => $domain->getSld(),
@@ -176,10 +179,15 @@ class Registrar_Adapter_OpenProvider extends Registrar_AdapterAbstract
             'admin_handle' => $customerHandle,
             'tech_handle' => $customerHandle,
             'billing_handle' => $customerHandle,
-            'ns_group' => 'dns-openprovider',
             'autorenew' => 'default',
             'auth_code' => $domain->getEpp(),
         ];
+
+        if (!empty($existingNs)) {
+            $data['name_servers'] = $existingNs;
+        } else {
+            $data['ns_group'] = 'dns-openprovider';
+        }
 
         $response = $this->_request('POST', '/domains/transfer', $data);
         if ($response['code'] === 0) {
@@ -187,6 +195,27 @@ class Registrar_Adapter_OpenProvider extends Registrar_AdapterAbstract
         }
 
         return false;
+    }
+
+    /**
+     * Look up the current nameservers for a domain via DNS.
+     * Returns an array of ['name' => 'ns1.example.com'] entries, or empty array on failure.
+     */
+    private function _lookupNameservers(string $fqdn): array
+    {
+        $records = @dns_get_record($fqdn, DNS_NS);
+        if (empty($records)) {
+            return [];
+        }
+
+        $ns = [];
+        foreach ($records as $record) {
+            if (!empty($record['target'])) {
+                $ns[] = ['name' => rtrim($record['target'], '.')];
+            }
+        }
+
+        return $ns;
     }
 
     public function renewDomain(Registrar_Domain $domain)

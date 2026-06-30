@@ -120,11 +120,8 @@ class OpenProvider_API
 
         $headers = [
             "Authorization: Bearer {$accessToken}",
+            "Content-Type: application/json",
         ];
-
-        if ($requestMethod !== 'GET') {
-            array_merge($headers, ['Content-Type' => 'application/json']);
-        }
 
         curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 
