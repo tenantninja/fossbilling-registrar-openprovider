@@ -107,9 +107,16 @@ class Registrar_Adapter_OpenProvider extends Registrar_AdapterAbstract
             'admin_handle' => $customerHandle,
             'tech_handle' => $customerHandle,
             'billing_handle' => $customerHandle,
-            'ns_group' => 'dns-openprovider',
             'autorenew' => 'default'
         ];
+
+        // Use the nameservers submitted with the order, if any; otherwise fall back to OpenProvider's default DNS.
+        $customNs = $this->_getCustomNameservers($domain);
+        if (!empty($customNs)) {
+            $data['name_servers'] = $customNs;
+        } else {
+            $data['ns_group'] = 'dns-openprovider';
+        }
 
         try {
             $response = $this->_request('POST', '/domains', $data);
@@ -165,8 +172,12 @@ class Registrar_Adapter_OpenProvider extends Registrar_AdapterAbstract
         // Step 1: Ensure a customer handle exists
         $customerHandle = $this->_getOrCreateCustomer($domain->getContactAdmin());
 
-        // Step 2: Resolve existing nameservers via DNS so they are preserved after transfer
-        $existingNs = $this->_lookupNameservers($domain->getName());
+        // Step 2: Use the nameservers submitted with the order (typically pre-filled by a DNS
+        // scan at checkout/order time); fall back to a live DNS lookup if none were submitted.
+        $existingNs = $this->_getCustomNameservers($domain);
+        if (empty($existingNs)) {
+            $existingNs = $this->_lookupNameservers($domain->getName());
+        }
 
         // Step 3: Prepare the domain transfer data
         $data = [
@@ -195,6 +206,22 @@ class Registrar_Adapter_OpenProvider extends Registrar_AdapterAbstract
         }
 
         return false;
+    }
+
+    /**
+     * Read the nameservers submitted with the order (ns1-ns4 on the domain).
+     * Returns an array of ['name' => 'ns1.example.com'] entries, or empty array if none were set.
+     */
+    private function _getCustomNameservers(Registrar_Domain $domain): array
+    {
+        $ns = [];
+        foreach ([$domain->getNs1(), $domain->getNs2(), $domain->getNs3(), $domain->getNs4()] as $hostname) {
+            if (!empty($hostname)) {
+                $ns[] = ['name' => $hostname];
+            }
+        }
+
+        return $ns;
     }
 
     /**
