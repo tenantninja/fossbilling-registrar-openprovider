@@ -302,6 +302,11 @@ class Registrar_Adapter_OpenProvider extends Registrar_AdapterAbstract
         $domain->setExpirationTime(strtotime($opDomain['expiration_date']));
         $domain->setPrivacyEnabled($opDomain['is_private_whois_enabled']);
         $domain->setLocked($opDomain['is_locked']);
+        // OpenProvider's own account-wide default only applies at registration/transfer time;
+        // by the time we're reading a domain back, the API reports its resolved on/off state.
+        if (isset($opDomain['autorenew'])) {
+            $domain->setAutoRenew($opDomain['autorenew'] === 'on');
+        }
 
         $nameservers = $opDomain['name_servers'];
         if (isset($nameservers[0])) {
@@ -469,6 +474,38 @@ class Registrar_Adapter_OpenProvider extends Registrar_AdapterAbstract
 
         $data = [
             'is_private_whois_enabled' => false,
+        ];
+
+        $response = $this->_request('PUT', "/domains/{$domainId}", $data);
+        if ($response['code'] === 0) {
+            return true;
+        }
+
+        return false;
+    }
+
+    public function enableAutoRenew(Registrar_Domain $domain)
+    {
+        $domainId = $this->_getDomainId($domain);
+
+        $data = [
+            'autorenew' => 'on',
+        ];
+
+        $response = $this->_request('PUT', "/domains/{$domainId}", $data);
+        if ($response['code'] === 0) {
+            return true;
+        }
+
+        return false;
+    }
+
+    public function disableAutoRenew(Registrar_Domain $domain)
+    {
+        $domainId = $this->_getDomainId($domain);
+
+        $data = [
+            'autorenew' => 'off',
         ];
 
         $response = $this->_request('PUT', "/domains/{$domainId}", $data);
