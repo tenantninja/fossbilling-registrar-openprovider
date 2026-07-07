@@ -302,10 +302,15 @@ class Registrar_Adapter_OpenProvider extends Registrar_AdapterAbstract
         $domain->setExpirationTime(strtotime($opDomain['expiration_date']));
         $domain->setPrivacyEnabled($opDomain['is_private_whois_enabled']);
         $domain->setLocked($opDomain['is_locked']);
-        // OpenProvider's own account-wide default only applies at registration/transfer time;
-        // by the time we're reading a domain back, the API reports its resolved on/off state.
+        // OpenProvider's GET /domains response can report 'default' instead of a resolved
+        // on/off value for domains that were registered/transferred with autorenew=default
+        // (i.e. "follow the account-wide setting"). There is no documented API endpoint to
+        // read that account-wide default - even OpenProvider's own WHMCS module doesn't
+        // attempt it - so we hardcode the known current account setting here. If the
+        // account-wide default is ever changed in the OpenProvider control panel
+        // (Account > Settings > Auto-renew), this must be updated to match.
         if (isset($opDomain['autorenew'])) {
-            $domain->setAutoRenew($opDomain['autorenew'] === 'on');
+            $domain->setAutoRenew(in_array($opDomain['autorenew'], ['on', 'default'], true));
         }
 
         $nameservers = $opDomain['name_servers'];
