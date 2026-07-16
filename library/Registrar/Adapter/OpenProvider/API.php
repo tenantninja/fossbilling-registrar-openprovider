@@ -69,7 +69,7 @@ class OpenProvider_API
             $ch = curl_init($url);
 
             curl_setopt($ch, CURLOPT_HTTPHEADER, [
-                'Content-Type' => 'application/json'
+                'Content-Type: application/json'
             ]);
 
             curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'POST');
@@ -94,10 +94,9 @@ class OpenProvider_API
     /**
      * Do API request
      *
-     * @param $requesttype
-     * @param $request
+     * @param string $requestMethod
+     * @param string $request
      * @param array $data
-     * @param string $version
      * @return array|mixed|string
      */
     function request($requestMethod, $request, $data = array())
@@ -149,7 +148,7 @@ class OpenProvider_API
             var_dump($debugData);
         }
 
-        $result = json_decode($result, 1);
+        $result = json_decode($result, true);
         return $result;
     }
 }

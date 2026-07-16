@@ -22,7 +22,6 @@ class Registrar_Adapter_OpenProvider extends Registrar_AdapterAbstract
         'ApiUrl' => null
     );
 
-    private const MODULE_VERSION = "0.1";
     private const DIR_LOG = "logs";
     private const FILE_LOG = "openprovider.log";
 
